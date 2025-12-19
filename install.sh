@@ -8,11 +8,21 @@ echo "  Comet Jiggler Scheduler Installer"
 echo "========================================"
 echo ""
 
-printf "Enter admin password: "
-stty -echo
-read ADMIN_PASS
-stty echo
-echo ""
+# Check if running interactively or via pipe
+if [ -t 0 ]; then
+    printf "Enter admin password: "
+    stty -echo
+    read ADMIN_PASS
+    stty echo
+    echo ""
+else
+    echo "ERROR: This script must be run interactively (not piped)."
+    echo "Download and run it directly instead:"
+    echo "  wget https://raw.githubusercontent.com/NoBloodyABCorD/comet-jiggler-scheduler/main/install.sh"
+    echo "  chmod +x install.sh"
+    echo "  ./install.sh"
+    exit 1
+fi
 
 printf "Start time (HH:MM, default 07:30): "
 read START_TIME
