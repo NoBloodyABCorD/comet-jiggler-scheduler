@@ -72,9 +72,22 @@ cat > /usr/local/bin/toggle_jiggler.sh << SCRIPTEOF
 PASSWORD="$ADMIN_PASS"
 LOGFILE="/var/log/mousejiggler.log"
 API_BASE="https://localhost/api"
+CONFIG_FILE="/etc/kvmd/user/config.json"
 
 log() {
     echo "\$(date '+%Y-%m-%d %H:%M:%S') - \$1" >> "\$LOGFILE"
+}
+
+set_config() {
+    # Update the web UI config file
+    python3 -c "
+import json
+with open('\$CONFIG_FILE', 'r') as f:
+    config = json.load(f)
+config['mouse_jiggle'] = \$1
+with open('\$CONFIG_FILE', 'w') as f:
+    json.dump(config, f, indent=4)
+" 2>/dev/null
 }
 
 enable_jiggler() {
@@ -82,9 +95,13 @@ enable_jiggler() {
         -H "X-KVMD-User: admin" \
         -H "X-KVMD-Passwd: \$PASSWORD" 2>&1)
     if echo "\$RESPONSE" | grep -q '"ok".*true'; then
+        set_config "True"
         log "Mouse jiggler enabled"
+        echo "SUCCESS: Mouse jiggler enabled"
     else
         log "ERROR enabling jiggler: \$RESPONSE"
+        echo "FAILED: \$RESPONSE"
+        exit 1
     fi
 }
 
@@ -93,16 +110,32 @@ disable_jiggler() {
         -H "X-KVMD-User: admin" \
         -H "X-KVMD-Passwd: \$PASSWORD" 2>&1)
     if echo "\$RESPONSE" | grep -q '"ok".*true'; then
+        set_config "False"
         log "Mouse jiggler disabled"
+        echo "SUCCESS: Mouse jiggler disabled"
     else
         log "ERROR disabling jiggler: \$RESPONSE"
+        echo "FAILED: \$RESPONSE"
+        exit 1
     fi
 }
 
 status_jiggler() {
-    curl -sk "\$API_BASE/hid" \
+    RESPONSE=\$(curl -sk "\$API_BASE/hid" \
         -H "X-KVMD-User: admin" \
-        -H "X-KVMD-Passwd: \$PASSWORD"
+        -H "X-KVMD-Passwd: \$PASSWORD" 2>&1)
+    if echo "\$RESPONSE" | grep -q '"ok".*true'; then
+        ACTIVE=\$(echo "\$RESPONSE" | grep -o '"active":[^,]*' | head -1)
+        ENABLED=\$(echo "\$RESPONSE" | grep -o '"enabled":[^,}]*' | head -1)
+        echo "Jiggler API status: \$ACTIVE, \$ENABLED"
+        
+        # Also check config file
+        CONFIG_STATE=\$(python3 -c "import json; print(json.load(open('\$CONFIG_FILE'))['mouse_jiggle'])" 2>/dev/null)
+        echo "Jiggler UI config: mouse_jiggle=\$CONFIG_STATE"
+    else
+        echo "FAILED: \$RESPONSE"
+        exit 1
+    fi
 }
 
 case "\$1" in
