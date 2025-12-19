@@ -18,6 +18,7 @@ Schedule the built-in GLKVM mouse jiggler to activate during configurable hours.
 - GL-iNet Comet (GL-RM1) with SSH access enabled
 - Admin password from initial device setup
 - SSH client (PuTTY, Terminal, etc.)
+- **2FA/TOTP must be disabled** — The PiKVM API does not support OTP tokens via command line ([API reference](https://docs.pikvm.org/api/))
 
 ## Install
 
@@ -134,20 +135,28 @@ ls -l /usr/local/bin/toggle_jiggler.sh
 
 ```bash
 # Check jiggler state
-curl -sk -u admin:YOUR_PASSWORD https://localhost/api/hid/jiggler | grep jiggler
+curl -sk https://localhost/api/hid \
+  -H "X-KVMD-User: admin" \
+  -H "X-KVMD-Passwd: YOUR_PASSWORD"
 
 # Enable manually
-curl -sk -X POST -u admin:YOUR_PASSWORD "https://localhost/api/hid/jiggler/start"
+curl -sk -X POST "https://localhost/api/hid/set_params?jiggler=true" \
+  -H "X-KVMD-User: admin" \
+  -H "X-KVMD-Passwd: YOUR_PASSWORD"
 
 # Disable manually
-curl -sk -X POST -u admin:YOUR_PASSWORD "https://localhost/api/hid/jiggler/stop"
+curl -sk -X POST "https://localhost/api/hid/set_params?jiggler=false" \
+  -H "X-KVMD-User: admin" \
+  -H "X-KVMD-Passwd: YOUR_PASSWORD"
 ```
+
+See [PiKVM API documentation](https://docs.pikvm.org/api/) for more details.
 
 ### Common Issues
 
 | Problem | Solution |
 | --- | --- |
-| 403 Forbidden | Check admin password in script |
+| 403 Forbidden | Check admin password in script, or disable 2FA/TOTP |
 | Connection refused | Verify Comet is responsive, restart if needed |
 | Jiggler not working | Ensure USB HID connection is active in web UI |
 | Teams still shows Away | Check if org policy enforces stricter timeout |

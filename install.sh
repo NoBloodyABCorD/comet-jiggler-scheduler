@@ -71,14 +71,16 @@ cat > /usr/local/bin/toggle_jiggler.sh << SCRIPTEOF
 #!/bin/sh
 PASSWORD="$ADMIN_PASS"
 LOGFILE="/var/log/mousejiggler.log"
-API_BASE="https://localhost/api/hid"
+API_BASE="https://localhost/api"
 
 log() {
     echo "\$(date '+%Y-%m-%d %H:%M:%S') - \$1" >> "\$LOGFILE"
 }
 
 enable_jiggler() {
-    RESPONSE=\$(curl -sk -X POST -u "admin:\$PASSWORD" "\$API_BASE/set_params?jiggler=true" 2>&1)
+    RESPONSE=\$(curl -sk -X POST "\$API_BASE/hid/set_params?jiggler=true" \
+        -H "X-KVMD-User: admin" \
+        -H "X-KVMD-Passwd: \$PASSWORD" 2>&1)
     if echo "\$RESPONSE" | grep -q '"ok".*true'; then
         log "Mouse jiggler enabled"
     else
@@ -87,7 +89,9 @@ enable_jiggler() {
 }
 
 disable_jiggler() {
-    RESPONSE=\$(curl -sk -X POST -u "admin:\$PASSWORD" "\$API_BASE/set_params?jiggler=false" 2>&1)
+    RESPONSE=\$(curl -sk -X POST "\$API_BASE/hid/set_params?jiggler=false" \
+        -H "X-KVMD-User: admin" \
+        -H "X-KVMD-Passwd: \$PASSWORD" 2>&1)
     if echo "\$RESPONSE" | grep -q '"ok".*true'; then
         log "Mouse jiggler disabled"
     else
@@ -96,7 +100,9 @@ disable_jiggler() {
 }
 
 status_jiggler() {
-    curl -sk -u "admin:\$PASSWORD" "\$API_BASE" | grep -o '"jiggler":{[^}]*}'
+    curl -sk "\$API_BASE/hid" \
+        -H "X-KVMD-User: admin" \
+        -H "X-KVMD-Passwd: \$PASSWORD"
 }
 
 case "\$1" in
